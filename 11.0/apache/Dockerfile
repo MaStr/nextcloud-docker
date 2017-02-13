@@ -11,12 +11,14 @@ RUN apt-get update && apt-get install -y \
   libmemcached-dev \
   libpng12-dev \
   libpq-dev \
+  libc-client-dev \
   libkrb5-dev \
   libxml2-dev \
   && rm -rf /var/lib/apt/lists/*
 
 # https://docs.nextcloud.com/server/9/admin_manual/installation/source_installation.html
 RUN docker-php-ext-configure gd --with-png-dir=/usr --with-jpeg-dir=/usr \
+  && docker-php-ext-configure imap --with-kerberos --with-imap-ssl \
   && docker-php-ext-configure ldap --with-libdir=lib/x86_64-linux-gnu \
   && docker-php-ext-install imap gd exif intl mbstring mcrypt ldap mysql opcache pdo_mysql pdo_pgsql pgsql zip
 
