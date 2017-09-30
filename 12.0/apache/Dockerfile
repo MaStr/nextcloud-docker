@@ -1,4 +1,4 @@
-FROM php:7.1-%%VARIANT%%
+FROM php:7.1-apache
 
 RUN apt-get update && apt-get install -y \
   rsync \
@@ -13,13 +13,16 @@ RUN apt-get update && apt-get install -y \
   libpng12-dev \
   libpq-dev \
   libxml2-dev \
+  libc-client-dev \
+  libkrb5-dev \
   && rm -rf /var/lib/apt/lists/*
 
 # https://docs.nextcloud.com/server/9/admin_manual/installation/source_installation.html
 RUN debMultiarch="$(dpkg-architecture --query DEB_BUILD_MULTIARCH)" \
   && docker-php-ext-configure gd --with-png-dir=/usr --with-jpeg-dir=/usr \
+  && docker-php-ext-configure imap --with-png-dir=/usr --with-jpeg-dir=/usr --with-kerberos --with-imap-ssl \
   && docker-php-ext-configure ldap --with-libdir="lib/$debMultiarch" \
-  && docker-php-ext-install gd exif intl mbstring mcrypt ldap mysqli opcache pdo_mysql pdo_pgsql pgsql zip pcntl
+  && docker-php-ext-install gd exif intl mbstring mcrypt ldap mysqli opcache pdo_mysql pdo_pgsql pgsql zip pcntl imap
 
 # set recommended PHP.ini settings
 # see https://docs.nextcloud.com/server/12/admin_manual/configuration_server/server_tuning.html#enable-php-opcache
@@ -42,7 +45,14 @@ RUN set -ex \
  && docker-php-ext-enable apcu redis memcached
 RUN a2enmod rewrite
 
-ENV NEXTCLOUD_VERSION %%VERSION%%
+RUN { \
+        echo 'date.timezone = "Europe/Berlin"; \
+        echo 'display_errors = "On" ; \
+        echo 'log_errors = "On"' ;\
+   }  > /usr/local/etc/php/conf.d/custom.ini
+
+
+ENV NEXTCLOUD_VERSION 12.0.3
 
 RUN chown -R www-data:root /var/www/html && \
     chmod -R g=u /var/www/html
@@ -68,4 +78,4 @@ COPY docker-entrypoint.sh /entrypoint.sh
 COPY config/* /usr/src/nextcloud/config/
 
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["%%CMD%%"]
+CMD ["apache2-foreground"]
